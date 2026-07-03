@@ -10,7 +10,6 @@ PLATFORMS = [
     Platform.LOCK,
     Platform.SENSOR,
     Platform.CLIMATE,
-    Platform.SWITCH,
 ]
 
 # INTEGRATION ATTRIBUTES
