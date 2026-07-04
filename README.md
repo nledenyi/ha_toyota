@@ -1,8 +1,17 @@
 [![License](https://img.shields.io/github/license/pytoyoda/ha_toyota)](LICENSE)
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/hacs/integration)
-![Version](https://img.shields.io/github/v/release/pytoyoda/ha_toyota)
-![Downloads](https://img.shields.io/github/downloads/pytoyoda/ha_toyota/total)
+![Version](https://img.shields.io/github/v/release/unsnow-iac/ha_toyota)
+![Downloads](https://img.shields.io/github/downloads/unsnow-iac/ha_toyota/total)
 [![CodeQL](https://github.com/pytoyoda/ha_toyota/actions/workflows/codeql.yml/badge.svg)](https://github.com/pytoyoda/ha_toyota/actions/workflows/codeql.yml)
+
+> [!IMPORTANT]
+> **Interim community fork.** This is a temporary patched build of
+> [`pytoyoda/ha_toyota`](https://github.com/pytoyoda/ha_toyota) that fixes the 2026
+> Toyota API migration (read endpoints returning 403/500) ahead of the upstream
+> release. Add this repo to HACS as a **custom repository** and install the latest
+> **Release**. It will be **retired** once upstream ships the fix — track
+> [pytoyoda/ha_toyota#318](https://github.com/pytoyoda/ha_toyota/issues/318); at
+> that point, redownload the official integration in HACS.
 
 <p align="center">
     <img src="https://brands.home-assistant.io/_/toyota/icon@2x.png" alt="logo" height="200">

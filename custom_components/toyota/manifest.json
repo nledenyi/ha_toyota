@@ -11,5 +11,5 @@
     "pytoyoda @ https://github.com/unsnow-iac/pytoyoda/releases/download/v5.1.0.post11/pytoyoda-5.1.0.post11-py3-none-any.whl",
     "arrow"
   ],
-  "version": "v2.5.0"
+  "version": "2.5.1"
 }
