@@ -26,6 +26,7 @@ from pytoyoda.models.endpoints.command import CommandType
 
 from .const import DOMAIN, HTTP_ERROR_THRESHOLD
 from .entity import ToyotaBaseEntity
+from .utils import record_command_result
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -126,13 +127,31 @@ class ToyotaRemoteCommandButton(ToyotaBaseEntity, ButtonEntity):
         try:
             _LOGGER.debug("Sending %s to %s", command.value, self.vehicle.alias)
             status = await self.vehicle.post_command(command)
-        except Exception:  # pylint: disable=W0718
+        except Exception as err:  # pylint: disable=W0718
             _LOGGER.exception(
                 "Error sending %s to %s", command.value, self.vehicle.alias
             )
+            record_command_result(
+                self.hass,
+                self._entry_id,
+                self.vehicle.vin,
+                command.value,
+                ok=False,
+                detail=repr(err),
+            )
             return
         code = getattr(status, "code", None)
-        if code is not None and code >= HTTP_ERROR_THRESHOLD:
+        rejected = code is not None and code >= HTTP_ERROR_THRESHOLD
+        record_command_result(
+            self.hass,
+            self._entry_id,
+            self.vehicle.vin,
+            command.value,
+            ok=not rejected,
+            code=code,
+            detail=getattr(status, "message", None),
+        )
+        if rejected:
             _LOGGER.warning(
                 "%s for %s returned code %s: %s",
                 command.value,

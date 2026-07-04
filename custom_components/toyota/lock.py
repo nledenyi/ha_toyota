@@ -29,6 +29,7 @@ from pytoyoda.models.endpoints.command import CommandType
 
 from .const import DOMAIN, HTTP_ERROR_THRESHOLD, ICON_CAR_DOOR_LOCK
 from .entity import ToyotaBaseEntity
+from .utils import record_command_result
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -157,7 +158,17 @@ class ToyotaDoorLock(ToyotaBaseEntity, LockEntity):
             _LOGGER.debug("Sending %s to %s", command.value, self.vehicle.alias)
             status = await self.vehicle.post_command(command)
             code = getattr(status, "code", None)
-            if code is not None and code >= HTTP_ERROR_THRESHOLD:
+            rejected = code is not None and code >= HTTP_ERROR_THRESHOLD
+            record_command_result(
+                self.hass,
+                self._entry_id,
+                self.vehicle.vin,
+                command.value,
+                ok=not rejected,
+                code=code,
+                detail=getattr(status, "message", None),
+            )
+            if rejected:
                 _LOGGER.warning(
                     "%s for %s returned code %s: %s",
                     command.value,
@@ -175,9 +186,17 @@ class ToyotaDoorLock(ToyotaBaseEntity, LockEntity):
             # protects against the stale reading this will likely return.
             await asyncio.sleep(_REFRESH_DELAY)
             await self.coordinator.async_request_refresh()
-        except Exception:  # pylint: disable=W0718
+        except Exception as err:  # pylint: disable=W0718
             _LOGGER.exception(
                 "Error sending %s to %s", command.value, self.vehicle.alias
+            )
+            record_command_result(
+                self.hass,
+                self._entry_id,
+                self.vehicle.vin,
+                command.value,
+                ok=False,
+                detail=repr(err),
             )
             self._optimistic_locked = None
             self._telemetry_at_command = None
