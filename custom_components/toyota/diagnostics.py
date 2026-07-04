@@ -205,9 +205,7 @@ def _pytoyoda_meta(coordinator: DataUpdateCoordinator) -> dict[str, Any]:
             "vehicle_info": info is not None,
             "features": hasattr(info, "features"),
             "extended_capabilities": hasattr(info, "extended_capabilities"),
-            "remote_service_capabilities": hasattr(
-                info, "remote_service_capabilities"
-            ),
+            "remote_service_capabilities": hasattr(info, "remote_service_capabilities"),
             "remote_display": hasattr(info, "remote_display"),
         }
     return meta
@@ -276,9 +274,7 @@ def _bucket_view(
     for key, value in bucket.items():
         if key in _BUCKET_PRESENCE_ONLY and isinstance(value, dict):
             # Holds live Vehicle objects — record presence only, never recurse.
-            view[key] = {
-                vin: True for vin in value if vins is None or vin in vins
-            }
+            view[key] = {vin: True for vin in value if vins is None or vin in vins}
             continue
         scoped = value
         if vins is not None and isinstance(value, dict):
