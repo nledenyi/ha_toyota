@@ -298,6 +298,25 @@ Defaults are tuned for a typical daily-driven car.
 | **Refresh status cache if older**                  | 30      | 5 - 180 | Maximum acceptable age of the cached `/status` data before issuing a fresh GET. Controls only the `/v1/global/remote/status` endpoint (door / window / lock / hood). Other data (odometer, fuel, location, etc.) is fetched every cycle regardless.                                                                                                                                                                                                                                                       |
 | **Wake POSTs per stop event**                      | 2       | 1 - 5   | Number of wake POSTs fired when a stop event is detected, one per coordinator cycle. 1 = single POST. 2 = an additional POST on the next cycle, which typically catches state the user changes shortly after stopping (locking the doors, opening the trunk) - those events trigger fresh modem reports that the second POST's poll loop picks up. Higher rarely helps and burns 12 V battery.                                                                                                            |
 
+## Reporting problems
+
+Please [open an issue](https://github.com/unsnow-iac/ha_toyota/issues/new/choose)
+and, most importantly, **attach the diagnostics**:
+
+Settings → Devices & services → Toyota → your car (the device) → ⋮ →
+**Download diagnostics**.
+
+The file is **auto-redacted** — your VIN is replaced with a short hash and GPS /
+personal details are stripped — but glance through it before posting, since
+issues are public. If GitHub will not accept the `.json`, zip it or rename it to
+`.txt`.
+
+Note this is an **interim fork** carrying the Toyota API-migration fix; it will
+be retired once upstream ships the fix (see
+[pytoyoda/ha_toyota#318](https://github.com/pytoyoda/ha_toyota/issues/318)). If
+you are on the official integration, report at
+[`pytoyoda/ha_toyota`](https://github.com/pytoyoda/ha_toyota/issues) instead.
+
 ## Contribution
 
 Contributions are more the welcome. This project uses `poetry` and `pre-commit` to make sure that

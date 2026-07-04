@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Official Toyota integration (not this fork)
+    url: https://github.com/pytoyoda/ha_toyota/issues
+    about: If you use the upstream integration rather than this interim fork, report there.
+  - name: API-migration background
+    url: https://github.com/pytoyoda/ha_toyota/issues/318
+    about: Context on the 2026 Toyota API migration this fork bridges until upstream ships the fix.

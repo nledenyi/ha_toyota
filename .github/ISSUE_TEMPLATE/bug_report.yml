@@ -1,0 +1,68 @@
+name: Bug report
+description: Report a problem with the interim EU community fork
+labels: [":bug: bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for testing! A couple of things before you file:
+
+        - This is an **interim community fork** of
+          [`pytoyoda/ha_toyota`](https://github.com/pytoyoda/ha_toyota) that
+          carries the 2026 Toyota API-migration fix. It will be retired once
+          upstream ships the fix
+          ([tracking #318](https://github.com/pytoyoda/ha_toyota/issues/318)).
+          If you are on the **official** integration, please report upstream.
+        - The **Download diagnostics** file is the single most useful thing to
+          attach — there's a field for it below.
+  - type: input
+    id: car
+    attributes:
+      label: Car model & year
+      placeholder: "e.g. Corolla Hatchback / Touring Sports, MC '23"
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Integration version + Home Assistant version
+      placeholder: "e.g. integration 2.5.1, HA 2026.7.0"
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps / what you tried
+      placeholder: |
+        1. ...
+        2. ...
+    validations:
+      required: false
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics
+      description: |
+        Settings → Devices & services → Toyota → your car (the device) → ⋮ →
+        **Download diagnostics**, then drag the file in here.
+
+        It is **auto-redacted** — your VIN is replaced with a short hash and GPS
+        / personal details are stripped — but please glance through it before
+        posting. If GitHub will not accept the `.json`, zip it or rename it to
+        `.txt`.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output (optional)
+      description: "Settings → System → Logs. Check for your e-mail / VIN before pasting."
+      render: text
+    validations:
+      required: false
