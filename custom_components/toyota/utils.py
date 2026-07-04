@@ -150,7 +150,7 @@ def charging_status_key(status: str) -> str:
     return status
 
 
-def decode_remote_display(value: Any) -> str:
+def decode_remote_display(value: Any) -> str:  # noqa: ANN401
     """Decode a RemoteDisplayStatus value to its enum name.
 
     ``remote_display`` arrives as an int, a numeric string, or (rarely) an
@@ -170,7 +170,7 @@ def decode_remote_display(value: Any) -> str:
     return "<non-status, see raw>"
 
 
-def predict_climate_class(features: Any, ext: Any) -> tuple[str, str]:
+def predict_climate_class(features: Any, ext: Any) -> tuple[str, str]:  # noqa: ANN401
     """Predict a car's remote-climate archetype from its capability flags.
 
     Ported from nledenyi's climate probe. Lets a diagnostics reader see which
@@ -199,14 +199,14 @@ def predict_climate_class(features: Any, ext: Any) -> tuple[str, str]:
     return "NO_CLIMATE", "no remote-climate flags set"
 
 
-def record_command_result(
+def record_command_result(  # noqa: PLR0913
     hass: HomeAssistant,
     entry_id: str,
     vin: str | None,
     command: str,
     *,
     ok: bool | None,
-    code: Any = None,
+    code: Any = None,  # noqa: ANN401
     detail: str | None = None,
 ) -> None:
     """Record the outcome of a remote command in the per-entry diagnostics bucket.
