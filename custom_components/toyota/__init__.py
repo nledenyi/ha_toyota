@@ -422,11 +422,13 @@ async def async_setup_entry(  # pylint: disable=too-many-statements # noqa: PLR0
             post_count_per_stop=post_count_per_stop,
         )
 
-    async def _execute_post_then_get(  # noqa: C901
+    async def _execute_post_then_get(  # noqa: C901, PLR0912
         vehicle: Vehicle,
         vin: str,
         state: VinState,
         timeout_s: int = STRATEGY_DEFAULT_WAKE_TIMEOUT_S,
+        *,
+        via_service_call: bool = False,
     ) -> None:
         """Issue POST /refresh-status, then poll GET /status until cache advances.
 
@@ -442,9 +444,12 @@ async def async_setup_entry(  # pylint: disable=too-many-statements # noqa: PLR0
         On POST failure (exception OR non-"000000" returnCode): record a
         Layer 1 rejection, possibly auto-disable, then fall back to a bare
         GET so /status entities still refresh this cycle. See ha_toyota#293.
-        On POST success: clear any prior auto-disable flag so a service-call
-        retry (or a transient-5xx recovery) restores normal operation
-        without requiring the user to toggle the option manually.
+        On POST success via a SERVICE CALL: clear any prior auto-disable
+        flag so the user's explicit retry restores normal operation without
+        toggling the option manually. Cadence POSTs never clear the flag:
+        it is entry-wide while rejection counters are per-VIN, so on a
+        multi-vehicle account a healthy sibling's cadence POST must not
+        undo an auto-disable earned by a persistently rejecting vehicle.
         """
         opts = _strategy_options()
         # POST raised after pytoyoda's retries exhausted (persistent gateway
@@ -469,6 +474,12 @@ async def async_setup_entry(  # pylint: disable=too-many-statements # noqa: PLR0
             httpcore.ConnectTimeout,
             asyncioexceptions.TimeoutError,
             httpx.ReadTimeout,
+            # A 200 whose body fails to parse (pydantic ValidationError, or
+            # json.JSONDecodeError -> ValueError) is a rejection for THIS
+            # endpoint - without this, it would escape and stub the whole
+            # vehicle's cycle.
+            ValidationError,
+            ValueError,
         ) as ex:
             post_error_code = _error_code(ex)
         state.last_post_attempt_at = dt_util.now()
@@ -525,32 +536,25 @@ async def async_setup_entry(  # pylint: disable=too-many-statements # noqa: PLR0
                         state.consecutive_post_rejections,
                     )
             # Fall back to a bare GET so /status entities still refresh
-            # this cycle (matches the HARD_DISABLED legacy path). Useful
-            # for cycles before auto-disable kicks in, and for any vehicle
-            # whose POST 500s but whose /status still serves stale-cache
-            # data we can read. Suppression list matches the POST's so
-            # transient connectivity issues during the fallback don't
-            # abort _refresh_one_vehicle's bookkeeping either.
-            with contextlib.suppress(
-                ToyotaApiError,
-                httpx.ConnectTimeout,
-                httpcore.ConnectTimeout,
-                asyncioexceptions.TimeoutError,
-                httpx.ReadTimeout,
-            ):
-                await _call_tagged(
-                    "status_after_post_fail",
-                    vin,
-                    vehicle.update(only=["status"]),
-                )
+            # this cycle (matches the HARD_DISABLED legacy path), with the
+            # normal GET-path bookkeeping (last_status_fetch_at /
+            # occurrence_date) instead of a bookkeeping-free inline fetch.
+            # Skipped when the POST failed with 429: pytoyoda already
+            # burned its 4-attempt backoff against a throttled gateway,
+            # and the GET would add up to four more requests.
+            if post_error_code != "HTTP 429":
+                await _execute_get_only(vehicle, vin, state)
             return
         on_post_layer1_success(state)
-        # Auto-recovery from HARD_DISABLED_AUTO: a successful POST proves
-        # the gateway can process this endpoint. Lift the flag so the
-        # strategy goes back to ACTIVE on the next cycle. Triggered by
-        # service-call bypass (the user explicitly retrying via the
-        # refresh button) or by a transient 5xx clearing on its own.
-        if entry.options.get(CONF_AUTO_DISABLED_STATUS_REFRESH, False):
+        # Auto-recovery from HARD_DISABLED_AUTO: a successful SERVICE-CALL
+        # POST proves the gateway can process this endpoint. Only the
+        # explicit user retry may clear the flag - it is entry-wide while
+        # rejection counters are per-VIN, so a healthy sibling vehicle's
+        # cadence POST must not undo an auto-disable earned by a
+        # persistently rejecting one.
+        if via_service_call and entry.options.get(
+            CONF_AUTO_DISABLED_STATUS_REFRESH, False
+        ):
             hass.config_entries.async_update_entry(
                 entry,
                 options={
@@ -559,7 +563,8 @@ async def async_setup_entry(  # pylint: disable=too-many-statements # noqa: PLR0
                 },
             )
             _LOGGER.info(
-                "Toyota auto-disable cleared for vin=...%s after successful POST",
+                "Toyota auto-disable cleared for vin=...%s after successful "
+                "service-call POST",
                 vin[-6:],
             )
 
@@ -624,7 +629,13 @@ async def async_setup_entry(  # pylint: disable=too-many-statements # noqa: PLR0
                 state.remaining_post_cycles = max(0, post_count_per_stop - 1)
             elif decision.trigger is RefreshTrigger.JUST_STOPPED_FOLLOWUP:
                 state.remaining_post_cycles = max(0, state.remaining_post_cycles - 1)
-            await _execute_post_then_get(vehicle, vin, state, wake_timeout_s)
+            await _execute_post_then_get(
+                vehicle,
+                vin,
+                state,
+                wake_timeout_s,
+                via_service_call=decision.trigger is RefreshTrigger.SERVICE_CALL,
+            )
         elif decision.action is RefreshAction.GET_ONLY:
             await _execute_get_only(vehicle, vin, state)
         elif decision.action is RefreshAction.HARD_DISABLED:
@@ -644,7 +655,13 @@ async def async_setup_entry(  # pylint: disable=too-many-statements # noqa: PLR0
         429s and read-timeouts are swallowed: the rest of vehicle data is fresh
         and LockStatus serves from the previous cycle's cached value.
         """
-        with contextlib.suppress(ToyotaApiError, httpx.ReadTimeout):
+        with contextlib.suppress(
+            ToyotaApiError,
+            httpx.ConnectTimeout,
+            httpcore.ConnectTimeout,
+            asyncioexceptions.TimeoutError,
+            httpx.ReadTimeout,
+        ):
             await _call_tagged("status_only", vin, vehicle.update(only=["status"]))
             status_data = vehicle._endpoint_data.get("status")  # noqa: SLF001
             occ = (
